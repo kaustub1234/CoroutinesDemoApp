@@ -13,6 +13,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.TreeSet
 import kotlin.math.log
 
@@ -24,6 +26,7 @@ class MainActivity : AppCompatActivity() {
     private val TAG = javaClass.simpleName
     private val RESULT_1 = "Result #1"
     private val RESULT_2 = "Result #2"
+    val JOB_TIMEOUT = 1900L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,14 +43,12 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun setNewText(input:String)
-    {
-        val newText = counterText.text.toString()+"\n$input"
+    private fun setNewText(input: String) {
+        val newText = counterText.text.toString() + "\n$input"
         counterText.text = newText
     }
 
-    suspend fun setTextOnMainThread(input:String)
-    {
+    private suspend fun setTextOnMainThread(input: String) {
         withContext(Dispatchers.Main)
         {
             setNewText(input);
@@ -55,12 +56,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun fakeApiReq() {
-        val result1 = getResultFromApi()
-        Log.d(TAG, "fakeApiReq: $result1")
-        setTextOnMainThread(result1)
+        withContext(Dispatchers.IO)
+        {
 
-        val result2 = getResultFromApi2()
-        setTextOnMainThread(result2)
+            //makes timeout or else return null
+            val job = withTimeoutOrNull(JOB_TIMEOUT) {
+                val result1 = getResultFromApi()
+                Log.d(TAG, "fakeApiReq: $result1")
+                setTextOnMainThread("Got $result1")
+
+                val result2 = getResultFromApi()
+                Log.d(TAG, "fakeApiReq: $result2")
+                setTextOnMainThread("Got $result2")
+            }
+
+            val cancelMessage = "Cancelling job...Job took longer time than $JOB_TIMEOUT"
+            Log.d(TAG, "fakeApiReq: $cancelMessage")
+            setTextOnMainThread(cancelMessage)
+        }
     }
 
     private suspend fun getResultFromApi(): String {
