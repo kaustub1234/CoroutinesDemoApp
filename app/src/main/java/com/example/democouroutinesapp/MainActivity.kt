@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
     private val TAG = javaClass.simpleName
     private val RESULT_1 = "Result #1"
     private val RESULT_2 = "Result #2"
-    val JOB_TIMEOUT = 1900L
+    val JOB_TIMEOUT = 19000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,14 +65,16 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "fakeApiReq: $result1")
                 setTextOnMainThread("Got $result1")
 
-                val result2 = getResultFromApi()
+                val result2 = getResultFromApi2()
                 Log.d(TAG, "fakeApiReq: $result2")
                 setTextOnMainThread("Got $result2")
             }
 
-            val cancelMessage = "Cancelling job...Job took longer time than $JOB_TIMEOUT"
-            Log.d(TAG, "fakeApiReq: $cancelMessage")
-            setTextOnMainThread(cancelMessage)
+            if (job == null) {
+                val cancelMessage = "Cancelling job...Job took longer time than $JOB_TIMEOUT ms"
+                Log.d(TAG, "fakeApiReq: $cancelMessage")
+                setTextOnMainThread(cancelMessage)
+            }
         }
     }
 
@@ -84,7 +86,7 @@ class MainActivity : AppCompatActivity() {
          * Thread can host many jobs/coroutines
          * */
 
-        delay(1000)
+        delay(3000)
         return RESULT_1;
     }
 
