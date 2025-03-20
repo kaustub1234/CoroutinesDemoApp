@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.TreeSet
 import kotlin.math.log
+import kotlin.system.measureTimeMillis
 
 class MainActivity : AppCompatActivity() {
 
@@ -40,14 +42,12 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun setNewText(input:String)
-    {
-        val newText = counterText.text.toString()+"\n$input"
+    private fun setNewText(input: String) {
+        val newText = counterText.text.toString() + "\n$input"
         counterText.text = newText
     }
 
-    suspend fun setTextOnMainThread(input:String)
-    {
+    suspend fun setTextOnMainThread(input: String) {
         withContext(Dispatchers.Main)
         {
             setNewText(input);
@@ -55,12 +55,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun fakeApiReq() {
-        val result1 = getResultFromApi()
-        Log.d(TAG, "fakeApiReq: $result1")
-        setTextOnMainThread(result1)
+        CoroutineScope(Dispatchers.IO).launch {
+            val executionTime = measureTimeMillis {
+                val result1 = async {
+                    Log.d(TAG, "fakeApiReq: job1: ${Thread.currentThread().name}")
+                    getResultFromApi()
+                }.await()
 
-        val result2 = getResultFromApi2()
-        setTextOnMainThread(result2)
+                val result2 = async {
+                    Log.d(TAG, "fakeApiReq: job2: ${Thread.currentThread().name}")
+                    try {
+
+                    } catch (e: CancellationException) {
+                        getResultFromApi2("jhghjg")
+                    }
+                }.await()
+                Log.d(TAG, "fakeApiReq: got result 2: $result2")
+            }
+            Log.d(TAG, "fakeApiReq: Total elapsed time: $executionTime ms")
+        }
     }
 
     private suspend fun getResultFromApi(): String {
@@ -75,7 +88,7 @@ class MainActivity : AppCompatActivity() {
         return RESULT_1;
     }
 
-    private suspend fun getResultFromApi2(): String {
+    private suspend fun getResultFromApi2(result1: String): String {
         logThread("getResultFromApi2")
         /**
          * Thread.sleep in java make an whole thread to sleep
@@ -83,8 +96,11 @@ class MainActivity : AppCompatActivity() {
          * Thread can host many jobs/coroutines
          * */
 
-        delay(1000)
-        return RESULT_2;
+        delay(1700)
+        if (result1.equals(RESULT_1)) {
+            return RESULT_2;
+        }
+        throw CancellationException("Result #1 was incorrect...")
     }
 
     private suspend fun logThread(methodName: String) {
