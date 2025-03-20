@@ -22,8 +22,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btn: Button;
     private lateinit var counterText: TextView
     private val TAG = javaClass.simpleName
-    private val RESULT_1 = "Result #1"
-    private val RESULT_2 = "Result #2"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,61 +29,32 @@ class MainActivity : AppCompatActivity() {
         btn = findViewById(R.id.button)
         counterText = findViewById(R.id.textView)
 
+        main()
+
         btn.setOnClickListener {
-            //Coroutine scopes: IO,main,Default
-            CoroutineScope(Dispatchers.IO).launch {
-                fakeApiReq()
+            counterText.text = (counter++).toString()
+        }
+
+    }
+
+    private suspend fun doNetworkRequest()
+    {
+        Log.d(TAG, "Starting network request!")
+        delay(3000)
+        Log.d(TAG, "Finished network request!")
+    }
+
+    fun main()
+    {
+        CoroutineScope(Dispatchers.Main).launch {
+            Log.d(TAG, "Current thread: ${Thread.currentThread().name}")
+            for (i in 1..100_000)
+            {
+                doNetworkRequest()
             }
         }
-
     }
 
-    private fun setNewText(input:String)
-    {
-        val newText = counterText.text.toString()+"\n$input"
-        counterText.text = newText
-    }
-
-    suspend fun setTextOnMainThread(input:String)
-    {
-        withContext(Dispatchers.Main)
-        {
-            setNewText(input);
-        }
-    }
-
-    private suspend fun fakeApiReq() {
-        val result1 = getResultFromApi()
-        Log.d(TAG, "fakeApiReq: $result1")
-        setTextOnMainThread(result1)
-
-        val result2 = getResultFromApi2()
-        setTextOnMainThread(result2)
-    }
-
-    private suspend fun getResultFromApi(): String {
-        logThread("getResultFromApi")
-        /**
-         * Thread.sleep in java make an whole thread to sleep
-         * whereas delay function in coroutines makes an job/coroutine to go for sleep
-         * Thread can host many jobs/coroutines
-         * */
-
-        delay(1000)
-        return RESULT_1;
-    }
-
-    private suspend fun getResultFromApi2(): String {
-        logThread("getResultFromApi2")
-        /**
-         * Thread.sleep in java make an whole thread to sleep
-         * whereas delay function in coroutines makes an job/coroutine to go for sleep
-         * Thread can host many jobs/coroutines
-         * */
-
-        delay(1000)
-        return RESULT_2;
-    }
 
     private suspend fun logThread(methodName: String) {
         Log.d(TAG, "$methodName -> ${Thread.currentThread().name}");
