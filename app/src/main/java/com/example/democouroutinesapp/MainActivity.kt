@@ -9,6 +9,7 @@ import android.widget.TextView
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -30,62 +31,39 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         btn = findViewById(R.id.button)
         counterText = findViewById(R.id.textView)
-
-        btn.setOnClickListener {
-            //Coroutine scopes: IO,main,Default
-            CoroutineScope(Dispatchers.IO).launch {
-                fakeApiReq()
+        main()
+    }
+    
+    fun main()
+    {
+        /**GlobalScope does not wait for its
+        parent job it will execute independently
+        from the current thread*/
+        val startTime = System.currentTimeMillis()
+        Log.d(TAG, "main: Starting parent job....")
+        val parentJob = CoroutineScope(Dispatchers.Main).launch { 
+            GlobalScope.launch { 
+                work(1)
+            }
+            
+            GlobalScope.launch { 
+                work(2)
             }
         }
-
-    }
-
-    private fun setNewText(input:String)
-    {
-        val newText = counterText.text.toString()+"\n$input"
-        counterText.text = newText
-    }
-
-    suspend fun setTextOnMainThread(input:String)
-    {
-        withContext(Dispatchers.Main)
-        {
-            setNewText(input);
+        
+        parentJob.invokeOnCompletion { 
+            if(it!=null)
+            {
+                Log.d(TAG, "main: Job was canceled after ${System.currentTimeMillis()-startTime} ms.")
+            }
         }
     }
 
-    private suspend fun fakeApiReq() {
-        val result1 = getResultFromApi()
-        Log.d(TAG, "fakeApiReq: $result1")
-        setTextOnMainThread(result1)
-
-        val result2 = getResultFromApi2()
-        setTextOnMainThread(result2)
+    private suspend fun work(i: Int) {
+        delay(3000)
+        Log.d(TAG, "work: $i done: ${Thread.currentThread().name}")
     }
 
-    private suspend fun getResultFromApi(): String {
-        logThread("getResultFromApi")
-        /**
-         * Thread.sleep in java make an whole thread to sleep
-         * whereas delay function in coroutines makes an job/coroutine to go for sleep
-         * Thread can host many jobs/coroutines
-         * */
-
-        delay(1000)
-        return RESULT_1;
-    }
-
-    private suspend fun getResultFromApi2(): String {
-        logThread("getResultFromApi2")
-        /**
-         * Thread.sleep in java make an whole thread to sleep
-         * whereas delay function in coroutines makes an job/coroutine to go for sleep
-         * Thread can host many jobs/coroutines
-         * */
-
-        delay(1000)
-        return RESULT_2;
-    }
 
     private suspend fun logThread(methodName: String) {
         Log.d(TAG, "$methodName -> ${Thread.currentThread().name}");
